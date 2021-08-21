@@ -1,4 +1,4 @@
-# DIY Homeautomation
+# Bottled Home
 
 ## Requirements
 
