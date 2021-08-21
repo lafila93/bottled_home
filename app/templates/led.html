@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block content %}
+{{ super() }}
+<h1>LED</h1>
+<input type="color" id="color" class="form-control form-control-color">
+<div id=modesRadio></div>
+{% endblock %}
+
+
+{% block script %}
+{{ super() }}
+<script src="{{ url_for('static', filename='led.js') }}"></script>
+{% endblock %}

@@ -8,3 +8,7 @@ def index():
 @bp.route("/sensors")
 def sensors():
     return render_template("sensors.html", title="Sensors")
+
+@bp.route("/led")
+def led():
+    return render_template("led.html", title="LED")
