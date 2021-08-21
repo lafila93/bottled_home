@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+
+{% block head %}
+{{ super() }}
+<script src="https://cdn.plot.ly/plotly-2.3.1.min.js"></script>
+{% endblock %}
+
+
+{% block content %}
+{{ super() }}
+<h1>Sensors</h1>
+<div id="plots"></div>
+<div id="timedelta_buttons">
+    <button id="plot_d" type="button" class="btn btn-primary" onclick="plot(sensors, {days: 1})">Day</button>
+    <button id="plot_w" type="button" class="btn btn-primary" onclick="plot(sensors, {days: 7})">Week</button>
+    <button id="plot_m" type="button" class="btn btn-primary" onclick="plot(sensors, {days: 31})">Month</button>
+    <button id="plot_y" type="button" class="btn btn-primary" onclick="plot(sensors, {days: 365})">Year</button>
+    <button id="plot_max" type="button" class="btn btn-primary" onclick="plot(sensors, {days: 99999})">Max</button>
+</div>
+<div id="sensor_table"></div>
+{% endblock %}
+
+
+{% block script %}
+{{ super() }}
+<script src="{{ url_for('static', filename='sensors.js') }}"></script>
+{% endblock %}
