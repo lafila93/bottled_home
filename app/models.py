@@ -4,7 +4,8 @@ from datetime import datetime
 class SensorReading(db.Model):
     __tablename__ = "sensor_reading"
     id = db.Column(db.Integer, primary_key=True)
-    sensor_id = db.Column(db.Integer, db.ForeignKey("sensor.id"), nullable=False)
+    sensor_id = db.Column(db.Integer, 
+        db.ForeignKey("sensor.id", onupdate="CASCADE"), nullable=False)
     value = db.Column(db.Float, nullable=False)
     datetime = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
@@ -43,7 +44,7 @@ class Sensor(db.Model):
     readings = db.relationship(
         "SensorReading",
         back_populates="sensor",
-        cascade="all, delete, save-update",
+        cascade="all, delete-orphan",
     )
 
     def __repr__(self):
@@ -57,5 +58,4 @@ class Sensor(db.Model):
             "name" : self.name,
             "unit" : self.unit,
             "description" : self.description,
-            "readings" : len(self.readings),
         }

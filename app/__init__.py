@@ -29,3 +29,13 @@ def create_app(config=Config):
     app.register_blueprint(bp_api, url_prefix='/api')
 
     return app
+
+if Config.SQLALCHEMY_DATABASE_URI.startswith("sqlite"):
+    from sqlalchemy.engine import Engine
+    from sqlalchemy import event
+
+    @event.listens_for(Engine, "connect")
+    def set_sqlite_pragma(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
