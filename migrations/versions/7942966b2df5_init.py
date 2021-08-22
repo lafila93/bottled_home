@@ -1,8 +1,8 @@
-"""Sensors
+"""init
 
-Revision ID: b2f90e0b184e
+Revision ID: 7942966b2df5
 Revises: 
-Create Date: 2021-08-21 18:43:24.519621
+Create Date: 2021-08-22 15:49:57.777708
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'b2f90e0b184e'
+revision = '7942966b2df5'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -22,15 +22,15 @@ def upgrade():
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.String(), nullable=True),
     sa.Column('unit', sa.String(), nullable=True),
-    sa.Column('comment', sa.String(), nullable=True),
+    sa.Column('description', sa.String(), nullable=True),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('name')
     )
     op.create_table('sensor_reading',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('sensor_id', sa.Integer(), nullable=False),
-    sa.Column('value', sa.Float(), nullable=True),
-    sa.Column('datetime', sa.DateTime(), nullable=True),
+    sa.Column('value', sa.Float(), nullable=False),
+    sa.Column('datetime', sa.DateTime(), nullable=False),
     sa.ForeignKeyConstraint(['sensor_id'], ['sensor.id'], ),
     sa.PrimaryKeyConstraint('id')
     )

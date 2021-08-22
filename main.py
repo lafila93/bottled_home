@@ -7,5 +7,5 @@ def make_shell_context():
     return {
         "db" : db,
         "Sensor" : models.Sensor,
-        "Sensor_Reading": models.Sensor_Reading,
+        "SensorReading": models.SensorReading,
     }
