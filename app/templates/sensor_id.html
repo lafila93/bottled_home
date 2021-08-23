@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block head %}
+{{ super() }}
+<script src="https://cdn.plot.ly/plotly-2.3.1.min.js"></script>
+{% endblock %}
+
+{% block content %}
+{{ super() }}
+<h1>Edit Sensor</h1>
+<div id="textboxes"></div>
+<input id="change" type="button" class="btn btn-warning" value="Change">
+<input id="delete" type="button" class="btn btn-danger" value="DELETE">
+<div id="output"></div>
+
+<div id="plot"></div>
+<div id="timedelta_buttons">
+    <button id="plot_d" type="button" class="btn btn-primary" onclick="plot('plot', sensor, {days: 1})">Day</button>
+    <button id="plot_w" type="button" class="btn btn-primary" onclick="plot('plot', sensor, {days: 7})">Week</button>
+    <button id="plot_m" type="button" class="btn btn-primary" onclick="plot('plot', sensor, {days: 31})">Month</button>
+    <button id="plot_y" type="button" class="btn btn-primary" onclick="plot('plot', sensor, {days: 365})">Year</button>
+    <button id="plot_max" type="button" class="btn btn-primary" onclick="plot('plot', sensor, {days: 99999})">Max</button>
+</div>
+{% endblock %}
+
+
+{% block script %}
+{{ super() }}
+<script src="{{ url_for('static', filename='sensor.js') }}"></script>
+<script>
+// get id by pathname
+let id = window.location.pathname.split("/").slice(-1)[0];
+let sensor = {}
+
+function getColumnProperties() {
+    return $.ajax({
+        url: "/api/sensor/columns",
+    });
+}
+
+function getValues() {
+    return $.ajax({
+        url: "/api/sensor",
+    });
+}
+
+// build textboxes
+// send two request and wait for both to complete
+$.when(
+    getColumnProperties(),
+    getValues(),
+).done(function(rColumns, rValues) {
+    let columns = rColumns[0];
+    let values = rValues[0][id];
+
+    sensor[id] = values;
+
+    // build textboxes
+    $("#textboxes").append(buildInputBoxes(columns));
+
+    // fill values in textboxes
+    for (cName in values) {
+        $("#" + cName).val(values[cName]);
+    }
+
+    // plot
+    plot("plot", sensor, {days: 1});
+    var timer = updatePlot("plot", sensor);
+})
+
+// change button
+$("#change").on("click", function() {
+    // gather all the data in the textboxes
+    let data = {}
+    $("#textboxes :input").each(function(i) {
+        data[this.dataset.column] = this.value === "" ? null : this.value;
+    });
+
+    $.ajax({
+        url: "/api/sensor/" + id,
+        method: "PUT",
+        contentType: "application/json",
+        data: JSON.stringify(data),
+        success: function(result) {
+            //id changed -> change website
+            if (id != result["id"]) {
+                window.location.href = "/sensor/" + result["id"];
+            }
+            $("#output").html(JSON.stringify(result));
+        },
+        error: function(result) {
+            $("#output").html(JSON.stringify(result));
+        },
+    });
+});
+
+// delete button
+$("#delete").on("click", function() {
+    $.ajax({
+        url: "/api/sensor/" + id,
+        method: "DELETE",
+        success: function(result) {
+            // redirect sensor
+            window.location.href = "/sensor";
+        },
+        error: function(result) {
+            $("#output").html(JSON.stringify(result));
+        }
+    });
+});
+
+</script>
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+
+{% block head %}
+{{ super() }}
+<script src="https://cdn.plot.ly/plotly-2.3.1.min.js"></script>
+{% endblock %}
+
+
+{% block content %}
+{{ super() }}
+<h1>Sensor</h1>
+<div id="plot"></div>
+<div id="timedelta_buttons">
+    <button id="plot_d" type="button" class="btn btn-primary" onclick="plot('plot', sensors, {days: 1})">Day</button>
+    <button id="plot_w" type="button" class="btn btn-primary" onclick="plot('plot', sensors, {days: 7})">Week</button>
+    <button id="plot_m" type="button" class="btn btn-primary" onclick="plot('plot', sensors, {days: 31})">Month</button>
+    <button id="plot_y" type="button" class="btn btn-primary" onclick="plot('plot', sensors, {days: 365})">Year</button>
+    <button id="plot_max" type="button" class="btn btn-primary" onclick="plot('plot', sensors, {days: 99999})">Max</button>
+</div>
+<div id="sensor_table"></div>
+<a href="/sensor/new">New Sensor</a>
+{% endblock %}
+
+
+{% block script %}
+{{ super() }}
+<script src="{{ url_for('static', filename='sensor.js') }}"></script>
+<script>
+
+let sensors = {};
+
+$.ajax({
+    url: "/api/sensor",
+    success: function(result) {
+        sensors = result;
+
+        displaySensorTable(sensors);
+        plot("plot", sensors, {days: 1});
+        var timer = updatePlot("plot", sensors);
+    },
+});
+
+</script>
+{% endblock %}

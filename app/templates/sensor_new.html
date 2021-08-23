@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block content %}
+{{ super() }}
+<h1>New Sensor</h1>
+<div id="textboxes"></div>
+<input id="create" type="button" class="btn btn-primary" value="Create">
+<div id="output"></div>
+{% endblock %}
+
+{% block script %}
+{{ super() }}
+<script src="{{ url_for('static', filename='sensor.js') }}"></script>
+<script>
+
+$.ajax({
+    url: "/api/sensor/columns",
+    success: function(columns) {
+        $("#textboxes").append(buildInputBoxes(columns));
+    }
+})
+
+// create button
+$("#create").on("click", function() {
+    // gather all the data in the textboxes
+    let data = {}
+    $("#textboxes :input").each(function(i) {
+        // fix empty strings (set null) and store in data object
+        data[this.dataset.column] = this.value === "" ? null : this.value;
+    });
+
+    $.ajax({
+        url: "/api/sensor",
+        method: "POST",
+        contentType: "application/json",
+        data: JSON.stringify(data),
+        success: function(result) {
+            // redirect to new sensor site
+            window.location.href = "/sensor/" + result["id"];
+        },
+        error: function(result) {
+            $("#output").html(JSON.stringify(result));
+        },
+    });
+});
+
+</script>
+{% endblock %}
