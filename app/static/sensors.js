@@ -41,7 +41,12 @@ function plot(sensors, timedelta) {
             data: Object.assign({"sensor_id": Object.keys(sensors)}, timedelta),
             success: function(result) {
                 traces = extractData(result);
-                Plotly.react("plots", traces);
+                Plotly.react(
+                    "plots",
+                    traces,
+                    {},
+                    {responsive: true},
+                );
             },
         });
     }
