@@ -1,7 +1,28 @@
 from app import db
 from datetime import datetime
 
-class SensorReading(db.Model):
+
+class ColumnMixin:
+    @classmethod
+    def column_properties(cls):
+        """Returns list of table columns dicts
+
+        Returns:
+            list(dict): list of dicts describing the table columns
+        """
+        columns = []
+        for column in cls.__table__.c:
+            columns.append({
+                "name" : column.name,
+                "type" : str(column.type),
+                "nullable" : column.nullable,
+                "primary_key" : column.primary_key,
+                "unique" : column.unique,
+            })
+        return columns
+
+
+class SensorReading(db.Model, ColumnMixin):
     __tablename__ = "sensor_reading"
     id = db.Column(db.Integer, primary_key=True)
     sensor_id = db.Column(db.Integer, 
@@ -34,7 +55,7 @@ class SensorReading(db.Model):
         return data
 
 
-class Sensor(db.Model):
+class Sensor(db.Model, ColumnMixin):
     __tablename__ = "sensor"
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, unique=True)

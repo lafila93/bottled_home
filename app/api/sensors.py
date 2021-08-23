@@ -29,6 +29,13 @@ def sensor_get():
     return jsonify({s.id : s.to_dict() for s in sensors})
 
 
+@bp.route("/sensor/columns")
+def sensor_columns():
+    """ Displays the table columns
+    """
+    return jsonify(models.Sensor.column_properties())
+
+
 @bp.route("/sensor", methods=["POST"])
 def sensor_post():
     """ Adding sensors
@@ -161,6 +168,13 @@ def sensor_reading_get():
         data[id] = [r.to_dict("value", "datetime") for r in readings]
 
     return jsonify(data)
+
+
+@bp.route("/sensor/reading/columns")
+def sensor_reading_columns():
+    """ Displays the table columns
+    """
+    return jsonify(models.SensorReading.column_properties())
 
 
 @bp.route("/sensor/reading", methods=["POST"])
