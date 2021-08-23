@@ -45,7 +45,7 @@ function plot(sensors, timedelta) {
                     "plots",
                     traces,
                     {},
-                    {responsive: true},
+                    // {responsive: true}, // bugs UI when rebuild
                 );
             },
         });
