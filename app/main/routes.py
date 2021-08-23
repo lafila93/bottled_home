@@ -8,3 +8,7 @@ def index():
 @bp.route("/sensors")
 def sensors():
     return render_template("sensors.html", title="Sensors")
+
+@bp.route("/about")
+def about():
+    return render_template("about.html", title="About")
