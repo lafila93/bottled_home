@@ -11,17 +11,22 @@ def sensor_get():
     """ route for sensor get request
 
     Request Args:
-        name[]: filtering the amount of sensors by given names
+        column_name1[]: filtering the amount of sensors by given column values
 
     Returns:
         response: JSON object of all sensors
     """
     q = models.Sensor.query
 
-    # filter by name[] args if given
-    names = request.args.getlist("name[]")
-    if len(names) > 0:
-        q = q.filter(models.Sensor.name.in_(names))
+    # maps sqlalchemy column to respective request args
+    # "...?id[]=1&id[]=2" -> {sqlcolumn(id) : ["1", "2"], sqlcolumn(name) : [], ...}
+    mapper = {col : request.args.getlist(col.name + "[]") for 
+        col in models.Sensor.__table__.columns}
+
+    # filter based on reponse arguments
+    for col, values in mapper.items():
+        if len(values) > 0:
+            q = q.filter(col.in_(values))
     
     sensors = q.all()
 
@@ -52,7 +57,7 @@ def sensor_post():
     data = request.get_json()
 
     # check if all arguments in json data are valid columns
-    columns = set(models.Sensor.__table__.columns.keys())
+    columns = set(models.Sensor.column_names())
     if not all(key in columns for key in data.keys()):
         return bad_request("Invalid columns")
 
@@ -109,7 +114,7 @@ def sensor_put(id):
         return bad_request("Sensor with id {} does not exist".format(id))
 
     # check if all data keys are valid column names
-    columns = models.Sensor.__table__.columns.keys()
+    columns = set(models.Sensor.column_names())
     if not all(key in columns for key in data.keys()):
         return bad_request("Invalid columns")
 

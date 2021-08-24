@@ -4,6 +4,15 @@ from datetime import datetime
 
 class ColumnMixin:
     @classmethod
+    def column_names(cls):
+        """ Returns list of column names
+
+        Returns:
+            list
+        """
+        return cls.__table__.columns.keys()
+
+    @classmethod
     def column_properties(cls):
         """Returns list of table columns dicts
 
@@ -11,7 +20,7 @@ class ColumnMixin:
             list(dict): list of dicts describing the table columns
         """
         columns = []
-        for column in cls.__table__.c:
+        for column in cls.__table__.columns:
             columns.append({
                 "name" : column.name,
                 "type" : str(column.type),
