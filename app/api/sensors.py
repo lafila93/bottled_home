@@ -143,6 +143,7 @@ def sensor_reading_get():
     Returns:
         response: JSON object of sensors_id keys and minimal reading values
     """
+    # grab sensor_id[] arguments and deduplicate
     ids = request.args.getlist("sensor_id[]")
     try:
         ids = {int(id) for id in ids}
@@ -153,6 +154,10 @@ def sensor_reading_get():
     for id in ids:    
         if models.Sensor.query.get(id) is None:
             return bad_request("Unknown sensor id {}".format(id))
+
+    # if no ids given, grab all ids
+    if len(ids) == 0:
+        ids = [s.id for s in models.Sensor.query.all()]
 
     days = request.args.get("days", 0)
     minutes = request.args.get("minutes", 0)
