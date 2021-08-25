@@ -2,6 +2,9 @@ from app.main import bp
 from flask import render_template, abort
 from app import models
 
+@bp.app_errorhandler(404)
+def page_not_found(e):
+    return render_template("404.html", title="Not found"), 404
 
 @bp.route("/")
 def index():
