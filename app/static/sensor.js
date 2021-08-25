@@ -28,6 +28,32 @@ function displaySensorTable(sensors) {
     }
 };
 
+function buildTimedeltaButtons(
+    plotName,
+    sensors,
+    buttons = {
+        "Day" : {days: 1},
+        "Week" : {days: 7},
+        "Month" : {days: 31},
+        "Year" : {days: 365},
+        "All" : {days: 99999},
+    }) {
+    // create empty element
+    let htmlButtons = $(document.createDocumentFragment());
+    for (key in buttons) {
+        (function (k) {
+            let btn = $("<button>")
+                .prop({"id": "timedelta_button_" + key, "type": "button"})
+                .addClass(["btn", "btn-primary"])
+                .on("click", function() {plot(plotName, sensors, buttons[k])})
+                .html(key)
+                .css({"margin-left":"2px", "margin-right":"2px"});
+            htmlButtons.append(btn);
+        }(key));
+    }
+    return htmlButtons;
+}
+
 // plots the sensor readings in given timedelta
 function plot(plotElem, sensors, timedelta) {
     //grab sensor data and plot
@@ -99,9 +125,7 @@ function buildInputBoxes(columns) {
         }[cType] || "text";
 
         let box = $("<input>")
-                .prop("type", inputType)
-                .prop("name", cName)
-                .prop("id", cName)
+                .prop({"type": inputType, "name": cName, "id": cName})
                 .addClass("form-control");
         box.prop("dataset").column = cName;
         if (cType == "FLOAT") {

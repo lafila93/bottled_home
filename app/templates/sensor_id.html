@@ -14,13 +14,7 @@
 <div id="output"></div>
 
 <div id="plot"></div>
-<div id="timedelta_buttons">
-    <button id="plot_d" type="button" class="btn btn-primary" onclick="plot('plot', sensor, {days: 1})">Day</button>
-    <button id="plot_w" type="button" class="btn btn-primary" onclick="plot('plot', sensor, {days: 7})">Week</button>
-    <button id="plot_m" type="button" class="btn btn-primary" onclick="plot('plot', sensor, {days: 31})">Month</button>
-    <button id="plot_y" type="button" class="btn btn-primary" onclick="plot('plot', sensor, {days: 365})">Year</button>
-    <button id="plot_max" type="button" class="btn btn-primary" onclick="plot('plot', sensor, {days: 99999})">Max</button>
-</div>
+<div id="timedelta_buttons"></div>
 {% endblock %}
 
 
@@ -30,7 +24,6 @@
 <script>
 // get id by pathname
 let id = window.location.pathname.split("/").slice(-1)[0];
-let sensor = {}
 
 function getColumnProperties() {
     return $.ajax({
@@ -53,6 +46,7 @@ $.when(
     let columns = rColumns[0];
     let values = rValues[0][id];
 
+    let sensor = {};
     sensor[id] = values;
 
     // build textboxes
@@ -65,6 +59,7 @@ $.when(
 
     // plot
     plot("plot", sensor, {days: 1});
+    $("#timedelta_buttons").append(buildTimedeltaButtons("plot", sensor));
     var timer = updatePlot("plot", sensor);
 })
 
