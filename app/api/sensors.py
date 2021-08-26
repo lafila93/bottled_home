@@ -195,29 +195,38 @@ def sensor_reading_post():
         Content-Type: application/json
 
     Request Args:
-        any valid sensor reading column names and values
+        any valid sensor reading column names and values as single obj or list of obj
     """
     data = request.get_json()
 
-    # check if all data keys are column names
-    columns = set(models.SensorReading.__table__.columns.keys())
-    if not all(key in columns for key in data.keys()):
-        return bad_request("Invalid columns")
+    # convert dict to list of single dict
+    if not isinstance(data, list):
+        data = [data]
 
-    # check if sensor_id exists
-    sensor_id = data.get("sensor_id")
-    if sensor_id is None or models.Sensor.query.get(sensor_id) is None:
-        return bad_request("'sensor_id' not set or invalid")
+    readings = []
+    columns = set(models.SensorReading.column_names())
+    for reading_dict in data:
+        # check if all data keys are column names
+        if not all(key in columns for key in reading_dict.keys()):
+            return bad_request("Invalid column names")
 
-    r = models.SensorReading(**data)
-    db.session.add(r)
+        # check if sensor_id exists
+        sensor_id = reading_dict.get("sensor_id")
+        if sensor_id is None or models.Sensor.query.get(sensor_id) is None:
+            return bad_request("'sensor_id' not set or invalid: '{}'".format(sensor_id))
+
+        # create new reading
+        r = models.SensorReading(**reading_dict)
+        readings.append(r)
+
+    db.session.add_all(readings)
     try:
         db.session.commit()
     except Exception as e:
         db.session.rollback()
-        return bad_request("Could not create sensor reading: '{}'".format(e))
+        return bad_request("Could not create sensor reading(s): '{}'".format(e))
     
-    return jsonify(r.to_dict())
+    return jsonify([r.to_dict() for r in readings])
 
 
 @bp.route("/sensor/reading/<int:id>", methods=["DELETE"])
@@ -259,7 +268,7 @@ def sensor_reading_put(id):
         return bad_request("Sensor reading with id {} does not exist".format(id))
     
     # check if all data keys are column names
-    columns = models.SensorReading.__table__.columns.keys()
+    columns = set(models.SensorReading.column_names())
     if not all(key in columns for key in data.keys()):
         return bad_request("Invalid columns")
 
