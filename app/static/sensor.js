@@ -1,8 +1,10 @@
-//displays the sensor table
-function displaySensorTable(sensors) {
+function buildSensorTable(sensors) {
+    //builds the sensor table
+
+    // create empty element
+    let table = $("<table>").addClass("table");
     if (!$.isEmptyObject(sensors)) {
         let header = Object.keys(sensors[Object.keys(sensors)[0]]);
-        let table = $("<table>").addClass("table");
 
         // table header
         let row = $("<tr>");
@@ -24,8 +26,8 @@ function displaySensorTable(sensors) {
             };
             table.append(row);
         }
-        $("#sensor_table").html(table);
     }
+    return table
 };
 
 function buildTimedeltaButtons(
@@ -45,7 +47,7 @@ function buildTimedeltaButtons(
             let btn = $("<button>")
                 .prop({"id": "timedelta_button_" + key, "type": "button"})
                 .addClass(["btn", "btn-primary"])
-                .on("click", function() {plot(plotName, sensors, buttons[k])})
+                .on("click", function() {getReadingsPlot(plotName, sensors, buttons[k]);})
                 .html(key)
                 .css({"margin-left":"2px", "margin-right":"2px"});
             htmlButtons.append(btn);
@@ -54,33 +56,39 @@ function buildTimedeltaButtons(
     return htmlButtons;
 }
 
+function getReadings(sensors, timedelta, callback) {
+    $.ajax({
+        url: "/api/sensor/reading",
+        data: Object.assign({"sensor_id": Object.keys(sensors)}, timedelta),
+        success: function(readings) {
+            callback(readings);
+        }
+    });
+}
+
 // plots the sensor readings in given timedelta
-function plot(plotElem, sensors, timedelta) {
-    //grab sensor data and plot
-    if (!$.isEmptyObject(sensors)) {
-        $.ajax({
-            url: "/api/sensor/reading",
-            data: Object.assign({"sensor_id": Object.keys(sensors)}, timedelta),
-            success: function(result) {
-                let traces = extractData(result, sensors);
-                Plotly.react(
-                    plotElem,
-                    traces,
-                    {},
-                    // {responsive: true}, // bugs UI when rebuild
-                );
-            },
-        });
-    }
-};
+function plot(plotElem, sensors, readings) {
+    let traces = extractData(readings, sensors);
+    Plotly.react(
+        plotElem,
+        traces,
+        {},
+    );
+}
+
+function getReadingsPlot(plotElem, sensors, timedelta) {
+    getReadings(sensors, timedelta, function(readings) {
+        plot(plotElem, sensors, readings);
+    });
+}
 
 // extracts the data how plotly needs it
-function extractData(result, sensors) {
+function extractData(readings, sensors) {
     let traces = [];
-    for (sensor_id in result) {
-        let datetimes = result[sensor_id].map(function(obj) {return obj["datetime"];});
-        let values = result[sensor_id].map(function(obj) {return obj["value"];});
-        traces.push({x: datetimes, y: values, name: sensors[sensor_id]["name"]});
+    for (sensorId in readings) {
+        let datetimes = readings[sensorId].map(function(obj) {return obj["datetime"];});
+        let values = readings[sensorId].map(function(obj) {return obj["value"];});
+        traces.push({x: datetimes, y: values, name: sensors[sensorId]["name"]});
     }
     return traces;
 }
@@ -89,20 +97,16 @@ function extractData(result, sensors) {
 function updatePlot(plotElem, sensors) {
     return setInterval(function() {
         if (!$.isEmptyObject(sensors)) {
-            $.ajax({
-                url: "/api/sensor/reading",
-                data: Object.assign({"sensor_id": Object.keys(sensors)}, {minutes: 1}),
-                success: function(result) {
-                    let traces = extractData(result, sensors);
-                    // transform into new standard
-                    let x = []; let y = [];
-                    for (i in traces) {
-                        let trace = traces[i];
-                        x.push(trace.x);
-                        y.push(trace.y);
-                    }
-                    Plotly.extendTraces(plotElem,  {x: x, y: y}, [...Array(traces.length).keys()]);
-                },
+            getReadings(sensors, {minutes:1}, function(readings) {
+                let traces = extractData(readings, sensors);
+                // transform into new standard
+                let x = [],  y = [];
+                for (i in traces) {
+                    let trace = traces[i];
+                    x.push(trace.x);
+                    y.push(trace.y);
+                }
+                Plotly.extendTraces(plotElem,  {x: x, y: y}, [...Array(traces.length).keys()]);
             })
         }
     }, 60000)

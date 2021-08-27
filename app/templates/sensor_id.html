@@ -58,7 +58,7 @@ $.when(
     }
 
     // plot
-    plot("plot", sensor, {days: 1});
+    getReadingsPlot("plot", sensor, {days: 1});
     $("#timedelta_buttons").append(buildTimedeltaButtons("plot", sensor));
     var timer = updatePlot("plot", sensor);
 })

@@ -24,11 +24,10 @@
 
 $.ajax({
     url: "/api/sensor",
-    success: function(result) {
-        let sensors = result;
+    success: function(sensors) {
 
-        displaySensorTable(sensors);
-        plot("plot", sensors, {days: 1});
+        $("#sensor_table").html(buildSensorTable(sensors));
+        getReadingsPlot("plot", sensors, {days: 1});
         $("#timedelta_buttons").append(buildTimedeltaButtons("plot", sensors));
         var timer = updatePlot("plot", sensors);
     },
