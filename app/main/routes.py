@@ -5,10 +5,6 @@ from flask import abort, render_template
 from flask_login import current_user, login_required
 
 
-@bp.app_errorhandler(404)
-def page_not_found(e):
-    return render_template("404.html", title="Not found"), 404
-
 @bp.route("/")
 def index():
     return render_template("index.html")

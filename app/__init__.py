@@ -33,6 +33,9 @@ def create_app(config=Config):
     from app.main import bp as bp_main
     app.register_blueprint(bp_main)
 
+    from app.errors import bp as bp_errors
+    app.register_blueprint(bp_errors)
+
     from app.auth import bp as bp_auth
     app.register_blueprint(bp_auth)
 
