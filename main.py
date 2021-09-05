@@ -6,6 +6,8 @@ app = create_app()
 def make_shell_context():
     return {
         "db" : db,
+        "models" : models,
         "Sensor" : models.Sensor,
         "SensorReading": models.SensorReading,
+        "User" : models.User,
     }

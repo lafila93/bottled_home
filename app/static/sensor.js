@@ -59,6 +59,9 @@ function buildTimedeltaButtons(
 function getReadings(sensors, timedelta, callback) {
     $.ajax({
         url: "/api/sensor/reading",
+        headers: {
+            Authorization: "Bearer " + Cookies.get("api_token"),
+        },
         data: Object.assign({"sensor_id": Object.keys(sensors)}, timedelta),
         success: function(readings) {
             callback(readings);
@@ -110,33 +113,4 @@ function updatePlot(plotElem, sensors) {
             })
         }
     }, 60000)
-}
-
-// builds input boxes
-function buildInputBoxes(columns) {
-    // create empty element
-    let htmlInputs = $(document.createDocumentFragment());
-
-    for (i in columns) {
-        let cName = columns[i].name
-        let cType = columns[i].type
-        
-        let label = $("<label>").prop("for", cName).html(cName + ":");
-
-        let inputType = {
-            "INTEGER" : "number",
-            "FLOAT" : "number",
-        }[cType] || "text";
-
-        let box = $("<input>")
-                .prop({"type": inputType, "name": cName, "id": cName})
-                .addClass("form-control");
-        box.prop("dataset").column = cName;
-        if (cType == "FLOAT") {
-            box.prop("step", "any");
-        }
-
-        htmlInputs.append(label).append(box).append("<br>");
-    }
-    return htmlInputs;
 }

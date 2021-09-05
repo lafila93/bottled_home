@@ -1,12 +1,13 @@
 from datetime import datetime, timedelta
 
-from app import db, models
+from app import auth_token, db, models
 from app.api import bp
 from app.api.errors import bad_request, error_response
 from flask import jsonify, request
 
 
 @bp.route("/sensor")
+@auth_token.login_required
 def sensor_get():
     """ route for sensor get request
 
@@ -16,7 +17,8 @@ def sensor_get():
     Returns:
         response: JSON object of all sensors
     """
-    q = models.Sensor.query
+    # filter sensors by user id beforehand
+    q = models.Sensor.query.filter_by(user_id=auth_token.current_user().id)
 
     # maps sqlalchemy column to respective request args
     # "...?id[]=1&id[]=2" -> {sqlcolumn(id) : ["1", "2"], sqlcolumn(name) : [], ...}
@@ -42,6 +44,7 @@ def sensor_columns():
 
 
 @bp.route("/sensor", methods=["POST"])
+@auth_token.login_required
 def sensor_post():
     """ Adding sensors
 
@@ -56,12 +59,13 @@ def sensor_post():
     """
     data = request.get_json()
 
-    # check if all arguments in json data are valid columns
-    columns = set(models.Sensor.column_names())
-    if not all(key in columns for key in data.keys()):
-        return bad_request("Invalid columns")
+    # check if all arguments in json data can be set
+    for key in data.keys():
+        if not key in models.Sensor.api_valid_setter:
+            return bad_request("Invalid column: '{}' - column cannot be set".format(key))
 
     sensor = models.Sensor(**data)
+    sensor.user = auth_token.current_user()
     db.session.add(sensor)
     try:
         db.session.commit()
@@ -73,6 +77,7 @@ def sensor_post():
 
 
 @bp.route("/sensor/<int:id>", methods=["DELETE"])
+@auth_token.login_required
 def sensor_delete(id):
     """ sensor delete
     
@@ -85,6 +90,8 @@ def sensor_delete(id):
     sensor = models.Sensor.query.get(id)
     if sensor is None:
         return bad_request("Sensor with id {} does not exist".format(id))
+    if sensor.user != auth_token.current_user():
+        return error_response(401, "You do not have permissions to delete this sensor.")
     db.session.delete(sensor)
     try:
         db.session.commit()
@@ -95,6 +102,7 @@ def sensor_delete(id):
 
 
 @bp.route("/sensor/<int:id>", methods=["PUT"])
+@auth_token.login_required
 def sensor_put(id):
     """ sensor update
 
@@ -112,11 +120,12 @@ def sensor_put(id):
     sensor = models.Sensor.query.get(id)
     if sensor is None:
         return bad_request("Sensor with id {} does not exist".format(id))
-
-    # check if all data keys are valid column names
-    columns = set(models.Sensor.column_names())
-    if not all(key in columns for key in data.keys()):
-        return bad_request("Invalid columns")
+    if sensor.user != auth_token.current_user():
+        return error_response(401, "You do not have permissions to change this sensor.")
+    # check if all arguments in json data can be set
+    for key in data.keys():
+        if not key in models.Sensor.api_valid_setter:
+            return bad_request("Invalid column: '{}' - column cannot be modified".format(key))
 
     # set new values
     for key, value in data.items():
@@ -132,6 +141,7 @@ def sensor_put(id):
 
 
 @bp.route("/sensor/reading")
+@auth_token.login_required
 def sensor_reading_get():
     """ route for sensor reading get request
 
@@ -152,12 +162,17 @@ def sensor_reading_get():
 
     # check for invalid ids
     for id in ids:    
-        if models.Sensor.query.get(id) is None:
+        s = models.Sensor.query.get(id)
+        if s is None:
             return bad_request("Unknown sensor id {}".format(id))
+        if s.user != auth_token.current_user():
+            return error_response(401, "No Permission to collect readings from sensor {}".format(s.id))
+        
 
     # if no ids given, grab all ids
     if len(ids) == 0:
-        ids = [s.id for s in models.Sensor.query.all()]
+        ids = [s.id for s in models.Sensor.query.filter_by(
+            user_id=auth_token.current_user().id).all()]
 
     days = request.args.get("days", 0)
     minutes = request.args.get("minutes", 0)
@@ -188,6 +203,7 @@ def sensor_reading_columns():
 
 
 @bp.route("/sensor/reading", methods=["POST"])
+@auth_token.login_required
 def sensor_reading_post():
     """ create new sensor readings
 
@@ -206,14 +222,19 @@ def sensor_reading_post():
     readings = []
     columns = set(models.SensorReading.column_names())
     for reading_dict in data:
-        # check if all data keys are column names
-        if not all(key in columns for key in reading_dict.keys()):
-            return bad_request("Invalid column names")
+        # check if all arguments in json data can be set
+        for key in reading_dict.keys():
+            if not key in models.SensorReading.api_valid_setter:
+                return bad_request("Invalid column: '{}' - column cannot be set".format(key))
 
         # check if sensor_id exists
         sensor_id = reading_dict.get("sensor_id")
-        if sensor_id is None or models.Sensor.query.get(sensor_id) is None:
+        sensor = models.Sensor.query.get(sensor_id)
+        if sensor_id is None or sensor is None:
             return bad_request("'sensor_id' not set or invalid: '{}'".format(sensor_id))
+        
+        if sensor.user != auth_token.current_user():
+            return error_response(401, "No permissions to add readings to sensor {}".format(sensor_id))
 
         # create new reading
         r = models.SensorReading(**reading_dict)
@@ -230,6 +251,7 @@ def sensor_reading_post():
 
 
 @bp.route("/sensor/reading/<int:id>", methods=["DELETE"])
+@auth_token.login_required
 def sensor_reading_delete(id):
     """ delete sensor readings
 
@@ -239,6 +261,9 @@ def sensor_reading_delete(id):
     r = models.SensorReading.query.get(id)
     if r is None:
         return bad_request("Sensor reading with id {} does not exist".format(id))
+    if r.sensor.user != auth_token.current_user():
+        return error_response(401, "No permissions to delete sensor reading")
+
     db.session.delete(r)
     try:
         db.session.commit()
@@ -249,6 +274,7 @@ def sensor_reading_delete(id):
 
 
 @bp.route("/sensor/reading/<int:id>", methods=["PUT"])
+@auth_token.login_required
 def sensor_reading_put(id):
     """ change sensor readings
 
@@ -266,11 +292,13 @@ def sensor_reading_put(id):
     r = models.SensorReading.query.get(id)
     if r is None:
         return bad_request("Sensor reading with id {} does not exist".format(id))
+    if r.sensor.user != auth_token.current_user():
+        return error_response(401, "No permissions to modify sensor reading")
     
-    # check if all data keys are column names
-    columns = set(models.SensorReading.column_names())
-    if not all(key in columns for key in data.keys()):
-        return bad_request("Invalid columns")
+    # check if all arguments in json data can be set
+    for key in data.keys():
+        if not key in models.SensorReading.api_valid_setter:
+            return bad_request("Invalid column: '{}' - column cannot be modified".format(key))
 
     # set new data
     for key, value in data.items():

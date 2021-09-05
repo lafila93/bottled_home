@@ -8,9 +8,11 @@
 {% block content %}
 {{ super() }}
 <h1>Edit Sensor</h1>
-<div id="textboxes"></div>
-<input id="change" type="button" class="btn btn-warning" value="Change">
-<input id="delete" type="button" class="btn btn-danger" value="DELETE">
+<div id="inputs">
+    {% include "_sensor.html" %}
+    <input id="change" type="button" class="btn btn-warning" value="Change">
+    <input id="delete" type="button" class="btn btn-danger" value="DELETE">
+</div>
 <div id="output"></div>
 
 <div id="plot"></div>
@@ -25,62 +27,37 @@
 // get id by pathname
 let id = window.location.pathname.split("/").slice(-1)[0];
 
-function getColumnProperties() {
-    return $.ajax({
-        url: "/api/sensor/columns",
-    });
-}
-
-function getValues() {
-    return $.ajax({
-        url: "/api/sensor",
-    });
-}
-
-// build textboxes
-// send two request and wait for both to complete
-$.when(
-    getColumnProperties(),
-    getValues(),
-).done(function(rColumns, rValues) {
-    let columns = rColumns[0];
-    let values = rValues[0][id];
-
-    let sensor = {};
-    sensor[id] = values;
-
-    // build textboxes
-    $("#textboxes").append(buildInputBoxes(columns));
-
-    // fill values in textboxes
-    for (cName in values) {
-        $("#" + cName).val(values[cName]);
+$.ajax({
+    url: "/api/sensor",
+    data: {id: [id]},
+    headers: {
+        Authorization: "Bearer " + Cookies.get("api_token"),
+    },
+    success: function(sensor) {
+        // plot
+        getReadingsPlot("plot", sensor, {days: 1});
+        $("#timedelta_buttons").append(buildTimedeltaButtons("plot", sensor));
+        var timer = updatePlot("plot", sensor);
     }
-
-    // plot
-    getReadingsPlot("plot", sensor, {days: 1});
-    $("#timedelta_buttons").append(buildTimedeltaButtons("plot", sensor));
-    var timer = updatePlot("plot", sensor);
-})
+});
 
 // change button
 $("#change").on("click", function() {
     // gather all the data in the textboxes
     let data = {}
-    $("#textboxes :input").each(function(i) {
-        data[this.dataset.column] = this.value === "" ? null : this.value;
+    $("#inputs :input[type=text]").each(function(i) {
+        data[this.name] = this.value === "" ? null : this.value;
     });
 
     $.ajax({
         url: "/api/sensor/" + id,
+        headers: {
+            Authorization: "Bearer " + Cookies.get("api_token"),
+        },
         method: "PUT",
         contentType: "application/json",
         data: JSON.stringify(data),
         success: function(result) {
-            //id changed -> change website
-            if (id != result["id"]) {
-                window.location.href = "/sensor/" + result["id"];
-            }
             $("#output").html(JSON.stringify(result));
         },
         error: function(result) {
@@ -93,6 +70,9 @@ $("#change").on("click", function() {
 $("#delete").on("click", function() {
     $.ajax({
         url: "/api/sensor/" + id,
+        headers: {
+            Authorization: "Bearer " + Cookies.get("api_token"),
+        },
         method: "DELETE",
         success: function(result) {
             // redirect sensor
