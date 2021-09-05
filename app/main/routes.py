@@ -7,13 +7,13 @@ from flask_login import current_user, login_required
 
 @bp.route("/")
 def index():
-    return render_template("index.html")
+    return render_template("main/index.html")
 
 
 @bp.route("/sensor")
 @login_required
 def sensor():
-    return render_template("sensor.html", title="Sensor")
+    return render_template("main/sensor.html", title="Sensor")
 
 
 @bp.route("/sensor/<int:id>")
@@ -29,14 +29,14 @@ def sensor_id(id):
     for key in ("name", "unit", "description"):
         setattr(getattr(form, key), "data", getattr(s, key))
 
-    return render_template("sensor_id.html", title="Edit Sensor", form=form)
+    return render_template("main/sensor_id.html", title="Edit Sensor", form=form)
 
 @bp.route("/sensor/new")
 @login_required
 def sensor_new():
     form = SensorForm()
-    return render_template("sensor_new.html", title="New Sensor", form=form)
+    return render_template("main/sensor_new.html", title="New Sensor", form=form)
 
 @bp.route("/about")
 def about():
-    return render_template("about.html", title="About")
+    return render_template("main/about.html", title="About")
