@@ -1,8 +1,8 @@
-"""empty message
+"""yet another fresh start since sqlite is weird
 
-Revision ID: 4e275817daf1
+Revision ID: 1f5469a67b13
 Revises: 
-Create Date: 2021-09-05 10:10:34.704269
+Create Date: 2021-09-09 21:28:41.432324
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '4e275817daf1'
+revision = '1f5469a67b13'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -31,7 +31,7 @@ def upgrade():
     sa.Column('unit', sa.String(), nullable=True),
     sa.Column('description', sa.String(), nullable=True),
     sa.Column('user_id', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['user_id'], ['user.id'], onupdate='CASCADE'),
+    sa.ForeignKeyConstraint(['user_id'], ['user.id'], onupdate='CASCADE', ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_table('sensor_reading',
@@ -39,7 +39,7 @@ def upgrade():
     sa.Column('sensor_id', sa.Integer(), nullable=False),
     sa.Column('value', sa.Float(), nullable=True),
     sa.Column('datetime', sa.DateTime(), nullable=False),
-    sa.ForeignKeyConstraint(['sensor_id'], ['sensor.id'], onupdate='CASCADE'),
+    sa.ForeignKeyConstraint(['sensor_id'], ['sensor.id'], onupdate='CASCADE', ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
     # ### end Alembic commands ###

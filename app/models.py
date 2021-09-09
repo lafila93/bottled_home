@@ -37,8 +37,31 @@ class ApiMixin:
                 "nullable" : column.nullable,
                 "primary_key" : column.primary_key,
                 "unique" : column.unique,
+                "default" : column.default,
             })
         return columns
+
+    def update(self, **kwargs):
+        """ Updates self by given data, dict of column names and values
+        Sanity check not included, invalid value types will pop up during commit
+
+        Args:
+            kwargs: column names and values
+
+        Returns:
+            self
+
+        Raises:
+            KeyError: if any key isn't a valid column name
+        """
+        # check if all keys are valid column names
+        if not all(key in self.column_names() for key in kwargs.keys()):
+            raise KeyError
+
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+        return self
 
 
 class SensorReading(db.Model, ApiMixin):
@@ -46,7 +69,8 @@ class SensorReading(db.Model, ApiMixin):
 
     id = db.Column(db.Integer, primary_key=True)
     sensor_id = db.Column(db.Integer, 
-        db.ForeignKey("sensor.id", onupdate="CASCADE"), nullable=False)
+        db.ForeignKey("sensor.id", onupdate="CASCADE", ondelete="CASCADE"),
+        nullable=False)
     value = db.Column(db.Float, nullable=True)
     datetime = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
@@ -85,7 +109,8 @@ class Sensor(db.Model, ApiMixin):
     unit = db.Column(db.String)
     description = db.Column(db.String)
     user_id = db.Column(db.Integer, 
-        db.ForeignKey("user.id", onupdate="CASCADE"), nullable=False
+        db.ForeignKey("user.id", onupdate="CASCADE", ondelete="CASCADE"),
+        nullable=False,
     )
 
     # relationships
@@ -93,6 +118,7 @@ class Sensor(db.Model, ApiMixin):
         "SensorReading",
         back_populates="sensor",
         cascade="all, delete-orphan",
+        passive_deletes=True, # let cascading deletes be managed by db
     )
 
     user = db.relationship(
@@ -117,7 +143,7 @@ class Sensor(db.Model, ApiMixin):
         }
 
 
-class User(db.Model, UserMixin):
+class User(db.Model, UserMixin, ApiMixin):
     __tablename__ = "user"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -127,7 +153,8 @@ class User(db.Model, UserMixin):
     sensors = db.relationship(
         "Sensor",
         back_populates="user",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
+        passive_deletes=True, # let cascading deletes be managed by db
     )
 
     def __repr__(self):

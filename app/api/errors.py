@@ -13,3 +13,6 @@ def error_response(status_code, message=None):
 
 def bad_request(message=None):
     return error_response(400, message)
+
+def unauthorized(message=None):
+    return error_response(401, message)
