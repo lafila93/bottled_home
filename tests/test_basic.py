@@ -1,4 +1,5 @@
 import datetime
+import time
 import unittest
 
 import app
@@ -214,6 +215,9 @@ class TestApi(TestCaseWebApp):
         reading_id = response_valid_one.get_json()[0]["id"]
         self.assertIsNotNone(models.SensorReading.query.get(reading_id))
 
+        # check datetime (timestamp)
+        post(200, json={"sensor_id": sensor.id, "datetime": time.time()})
+
         # post multiple
         response_valid_multiple = post(
             status_code=200,
@@ -247,6 +251,9 @@ class TestApi(TestCaseWebApp):
         reading = models.SensorReading.query.get(1)
         put(200, reading.id, json={"value":-1})
         self.assertEqual(reading.value, -1)
+
+        # check datetime (timestamp)
+        put(200, reading.id, json={"datetime": time.time()})
 
         # invalid
         put(400, reading.id, json={"value":"a"}) # invalid type

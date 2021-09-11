@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import time
 
 from app import db, models
 from app.api import bp
@@ -215,6 +216,14 @@ def sensor_reading_post():
         if sensor_id is None or sensor is None:
             return bad_request("'sensor_id' not set or invalid: '{}'".format(sensor_id))
 
+        # if datetime timestamp is given, try to convert
+        if "datetime" in reading_dict:
+            timestamp = reading_dict["datetime"]
+            try:
+                reading_dict["datetime"] = datetime.fromtimestamp(timestamp)
+            except TypeError as e:
+                return bad_request("Could not convert given datetime timestamp: '{}'".format(timestamp))
+
         # create new reading
         r = models.SensorReading(**reading_dict)
         readings.append(r)
@@ -273,6 +282,14 @@ def sensor_reading_put(id):
         if not key in r.column_names():
             return bad_request("Column does not exist: '{}'".format(key))
 
+    # if datetime timestamp is given, try to convert
+    if "datetime" in data:
+        timestamp = data["datetime"]
+        try:
+            data["datetime"] = datetime.fromtimestamp(timestamp)
+        except TypeError as e:
+            return bad_request("Could not convert given datetime timestamp: '{}'".format(timestamp))
+
     # set new data
     r.update(**data)
 
@@ -283,3 +300,7 @@ def sensor_reading_put(id):
         return bad_request("Could not update sensor reading: '{}'".format(e))
 
     return jsonify(r.to_dict())
+
+@bp.route("/timestamp")
+def timestamp():
+    return jsonify(time.time())
