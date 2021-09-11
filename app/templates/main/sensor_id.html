@@ -9,14 +9,36 @@
 {{ super() }}
 <h1>Edit Sensor</h1>
 <div id="inputs">
+    {# _sensor.html contains the form for name, unit and description inputs #}
     {% include "main/_sensor.html" %}
-    <input id="change" type="button" class="btn btn-warning" value="Change">
-    <input id="delete" type="button" class="btn btn-danger" value="DELETE">
+    <button id="changeButton" class="btn btn-warning">Change</button>
+    <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteConfirmationModal">DELETE</button>
 </div>
 <div id="output"></div>
 
 <div id="plot"></div>
 <div id="timedelta_buttons"></div>
+
+<div class="modal fade" id="deleteConfirmationModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Delete Sensor and its readings?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>
+                    Do you really want to delete this sensor and all of its readings?<br>
+                    This cannot be undone.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button id="deleteConfirmationButton" type="button" class="btn btn-danger" data-bs-dismiss="modal">DELETE</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 
@@ -42,7 +64,7 @@ $.ajax({
 });
 
 // change button
-$("#change").on("click", function() {
+$("#changeButton").on("click", function() {
     // gather all the data in the textboxes
     let data = {}
     $("#inputs :input[type=text]").each(function(i) {
@@ -67,7 +89,7 @@ $("#change").on("click", function() {
 });
 
 // delete button
-$("#delete").on("click", function() {
+$("#deleteConfirmationButton").on("click", function() {
     $.ajax({
         url: "/api/sensor/" + id,
         headers: {
