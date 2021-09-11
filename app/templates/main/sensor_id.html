@@ -52,9 +52,6 @@ let id = window.location.pathname.split("/").slice(-1)[0];
 $.ajax({
     url: "/api/sensor",
     data: {id: [id]},
-    headers: {
-        Authorization: "Bearer " + Cookies.get("api_token"),
-    },
     success: function(sensor) {
         // plot
         getReadingsPlot("plot", sensor, {days: 1});
@@ -73,9 +70,6 @@ $("#changeButton").on("click", function() {
 
     $.ajax({
         url: "/api/sensor/" + id,
-        headers: {
-            Authorization: "Bearer " + Cookies.get("api_token"),
-        },
         method: "PUT",
         contentType: "application/json",
         data: JSON.stringify(data),
@@ -92,9 +86,6 @@ $("#changeButton").on("click", function() {
 $("#deleteConfirmationButton").on("click", function() {
     $.ajax({
         url: "/api/sensor/" + id,
-        headers: {
-            Authorization: "Bearer " + Cookies.get("api_token"),
-        },
         method: "DELETE",
         success: function(result) {
             // redirect sensor

@@ -9,5 +9,4 @@ def make_shell_context():
         "models" : models,
         "Sensor" : models.Sensor,
         "SensorReading": models.SensorReading,
-        "User" : models.User,
     }

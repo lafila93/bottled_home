@@ -26,9 +26,6 @@ $("#create").on("click", function() {
 
     $.ajax({
         url: "/api/sensor",
-        headers: {
-            Authorization: "Bearer " + Cookies.get("api_token"),
-        },
         method: "POST",
         contentType: "application/json",
         data: JSON.stringify(data),

@@ -1,16 +1,10 @@
 from config import Config
 from flask import Flask
-from flask_httpauth import HTTPTokenAuth
-from flask_login import LoginManager
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
 migrate = Migrate()
-login_manager = LoginManager()
-login_manager.login_view = "auth.login"
-login_manager.login_message = "Please log in to access this page."
-auth_token = HTTPTokenAuth(scheme="Bearer")
 
 
 def create_app(config=Config):
@@ -27,7 +21,6 @@ def create_app(config=Config):
 
     db.init_app(app)
     migrate.init_app(app, db)
-    login_manager.init_app(app)
 
     # blueprint registering
     from app.main import bp as bp_main
@@ -35,9 +28,6 @@ def create_app(config=Config):
 
     from app.errors import bp as bp_errors
     app.register_blueprint(bp_errors)
-
-    from app.auth import bp as bp_auth
-    app.register_blueprint(bp_auth)
 
     from app.api import bp as bp_api
     app.register_blueprint(bp_api, url_prefix='/api')

@@ -37,9 +37,6 @@
 
 $.ajax({
     url: "/api/sensor",
-    headers: {
-        Authorization: "Bearer " + Cookies.get("api_token"),
-    },
     success: function(sensors) {
 
         $("#sensor_table").html(buildSensorTable(sensors));

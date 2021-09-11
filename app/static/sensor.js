@@ -58,9 +58,6 @@ function buildTimedeltaButtons(
 function getReadings(sensors, timedelta, callback) {
     $.ajax({
         url: "/api/sensor/reading",
-        headers: {
-            Authorization: "Bearer " + Cookies.get("api_token"),
-        },
         // example data: {sensor_id:[1, 2, ...], days: 1}
         data: Object.assign({"sensor_id": Object.keys(sensors)}, timedelta),
         success: function(readings) {
