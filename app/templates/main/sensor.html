@@ -12,8 +12,21 @@
 <h1>Sensor</h1>
 <div id="plot"></div>
 <div id="timedelta_buttons"></div>
+<div id="plot_type_radio" class="form-check" hidden>
+    <div class="form-check">
+        <input class="form-check-input" type="radio" name="plot_type" value="DEFAULT">
+        <label class="form-check-label" for="DEFAULT">DEFAULT</label>
+    </div>
+    <div class="form-check">
+        <input class="form-check-input" type="radio" name="plot_type" value="MULTI_Y">
+        <label class="form-check-label" for="MULTI_Y">MULTI_Y</label>
+    </div><div class="form-check">
+        <input class="form-check-input" type="radio" name="plot_type" value="STACKED_Y">
+        <label class="form-check-label" for="STACKED_Y">STACKED_Y</label>
+    </div>
+</div>
 <div id="sensor_table"></div>
-<a href="/sensor/new">New Sensor</a>
+<a href="{{ url_for('main.sensor_new') }}">New Sensor</a>
 {% endblock %}
 
 
@@ -30,11 +43,25 @@ $.ajax({
     success: function(sensors) {
 
         $("#sensor_table").html(buildSensorTable(sensors));
+
         getReadingsPlot("plot", sensors, {days: 1});
+
         $("#timedelta_buttons").append(buildTimedeltaButtons("plot", sensors));
+
         var timer = updatePlot("plot", sensors);
+
+        // plot layout radio: click replot
+        $("#plot_type_radio :input").on("click", function(event) {
+            setPlotLayoutType(this.value);
+            // TODO: do not hard code timedelta here
+            getReadingsPlot("plot", sensors, {days: 1}, type=Layout[this.value]);
+        });
+        $("#plot_type_radio").prop("hidden", false);
     },
 });
+
+// set current radio checked
+$("#plot_type_radio :input[value=" + getPlotLayoutType() + "]").prop("checked", true);
 
 </script>
 {% endblock %}
