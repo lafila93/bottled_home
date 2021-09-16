@@ -54,7 +54,9 @@ $.ajax({
     data: {id: [id]},
     success: function(sensor) {
         // plot
-        getReadingsPlot("plot", sensor, {days: 1});
+        getReadings(sensor, 60*60*24, function(readings) {
+            plot("plot", sensor, readings);
+        });
         $("#timedelta_buttons").append(buildTimedeltaButtons("plot", sensor));
         var timer = updatePlot("plot", sensor);
     }

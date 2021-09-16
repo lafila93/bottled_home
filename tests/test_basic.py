@@ -5,7 +5,7 @@ import unittest
 import app
 import config
 import sqlalchemy.exc
-from app import db, models
+from app import db, models, helper
 from flask import current_app
 
 config.Config.SQLALCHEMY_DATABASE_URI = "sqlite://"
@@ -184,7 +184,7 @@ class TestApi(TestCaseWebApp):
         get = lambda status_code, **kwargs: self.request(self.client.get, "/api/sensor/reading", status_code, **kwargs)
 
         # query all
-        response_all = get(200, query_string={"days":1})
+        response_all = get(200, query_string={"timedelta":60*60*24})
         data = response_all.get_json()
         self.assertEqual(len(data), self.n)
         # count all readings
@@ -193,17 +193,24 @@ class TestApi(TestCaseWebApp):
 
         # filter by first sensor
         sensor = models.Sensor.query.get(1)
-        response_sensor0 = get(200, query_string={"sensor_id[]":[sensor.id], "days":1})
+        response_sensor0 = get(200, query_string={"sensor_id[]":[sensor.id], "timedelta":60*60*24})
         data = response_sensor0.get_json()
         self.assertEqual(len([r for readings in data.values() for r in readings]), len(sensor.readings))
 
         # filter by last minute, should only yield one reading for each sensor
-        response_last_minute = get(200, query_string={"sensor_id[]":[sensor.id], "minutes":1})
+        response_last_minute = get(200, query_string={"sensor_id[]":[sensor.id], "timedelta":60})
         data = response_last_minute.get_json()
         self.assertEqual(len([r for readings in data.values() for r in readings]), 1)
 
         # ask for non existent sensor
         get(400, query_string={"sensor_id[]":999999})
+
+        # test timeinterval
+        response_timeinterval = get(200, query_string={"timeinterval":int(1e10), "timedelta":60*60*24, "sensor_id[]":[sensor.id]})
+        self.assertEqual(response_timeinterval.get_json()[str(sensor.id)][0]["count"], len(sensor.readings))
+
+        # invalid timeinterval string
+        get(400, query_string={"timeinterval":"g"})
 
 
     def test_sensor_reading_post(self):
@@ -261,3 +268,18 @@ class TestApi(TestCaseWebApp):
 
         # does not exist
         put(400, 999999, json={"value":1})
+
+class TestHelper(unittest.TestCase):
+
+    def test_to_datetime(self):
+        func = helper.to_datetime
+        t = 1631806889.163216
+        s = "2021-09-16T15:41:29.163216Z"
+        dt = datetime.datetime(2021, 9, 16, 15, 41, 29, 163216, datetime.timezone.utc)
+        self.assertEqual(dt, func(t))
+        self.assertEqual(dt, func(s))
+        with self.assertRaises(TypeError):
+            func(datetime.datetime.now())
+        with self.assertRaises(ValueError):
+            func("not a time")
+

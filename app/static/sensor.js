@@ -32,11 +32,11 @@ function buildTimedeltaButtons(
     plotName,
     sensors,
     buttons = {
-        "Day" : {days: 1},
-        "Week" : {days: 7},
-        "Month" : {days: 31},
-        "Year" : {days: 365},
-        "All" : {days: 99999},
+        "Day" : 60*60*24,
+        "Week" : 60*60*24*7,
+        "Month" : 60*60*24*31,
+        "Year" : 60*60*24*365,
+        "All" : 6e10,
     }) {
     // create empty element
     let htmlButtons = $(document.createDocumentFragment());
@@ -46,7 +46,11 @@ function buildTimedeltaButtons(
             let btn = $("<button>")
                 .prop({"id": "timedelta_button_" + key, "type": "button"})
                 .addClass(["btn", "btn-primary"])
-                .on("click", function() {getReadingsPlot(plotName, sensors, buttons[key]);})
+                .on("click", function() {
+                    getReadings(sensors, buttons[key], function(readings) {
+                        plot(plotName, sensors, readings);
+                    }, parsePlotConfigs().timeinterval)
+                })
                 .html(key)
                 .css({"margin-left":"2px", "margin-right":"2px"});
             htmlButtons.append(btn);
@@ -55,11 +59,34 @@ function buildTimedeltaButtons(
     return htmlButtons;
 }
 
-function getReadings(sensors, timedelta, callback) {
+function parsePlotConfigs() {
+    return {
+        layout: $("input[name=plot_layout]:checked").val() || "DEFAULT",
+        timeinterval: $("input[name=plot_timeinterval]:checked").val() || null,
+    }
+}
+
+function getReadings(
+        sensors, 
+        timedelta, 
+        callback, 
+        timeinterval=null, 
+        timeinterval_function=null) {
+    let data = {
+        "sensor_id": Object.keys(sensors),
+        "timedelta" : timedelta,
+    };
+
+    if (timeinterval) {
+        data["timeinterval"] = timeinterval;
+    }
+    if (timeinterval_function) {
+        data["timeinterval_function"] = timeinterval_function;
+    }
+
     $.ajax({
         url: "/api/sensor/reading",
-        // example data: {sensor_id:[1, 2, ...], days: 1}
-        data: Object.assign({"sensor_id": Object.keys(sensors)}, timedelta),
+        data: data,
         success: function(readings) {
             callback(readings);
         }
@@ -75,19 +102,24 @@ function plot(plotElem, sensors, readings) {
     Plotly.react(plotElem, traces, layout);
 }
 
-function getReadingsPlot(plotElem, sensors, timedelta) {
-    // combined function for request and plot
-    getReadings(sensors, timedelta, function(readings) {
-        plot(plotElem, sensors, readings);
-    });
+
+function getPlotCookie() {
+    let data = JSON.parse(Cookies.get("plot") || "{}");
+    if ($.isEmptyObject(data)) {
+        data = {
+            layout: "DEFAULT",
+            timeinterval: null
+        };
+        Cookies.set("plot", JSON.stringify(data));
+    }
+
+    return data;
 }
 
-function getPlotLayoutType() {
-    return Cookies.get("plot_layout_type") || "DEFAULT";
-}
-
-function setPlotLayoutType(type) {
-    Cookies.set("plot_layout_type", type);
+function setPlotCookieKey(key, value) {
+    let data = getPlotCookie();
+    data[key] = value;
+    Cookies.set("plot", JSON.stringify(data));
 }
 
 const Layout = {
@@ -99,11 +131,11 @@ const Layout = {
 function setupPlotlyLayout(sensors, traces) {
     // creates layout and  modifies traces accordingly
 
-    // get plotType based on cookies
-    let type = Layout[getPlotLayoutType()]
+    // get plot layout based on cookies
+    let plot_layout = Layout[parsePlotConfigs().layout]
     let layout = {};
 
-    if ([Layout.MULTI_Y, Layout.STACKED_Y].includes(type)) {
+    if ([Layout.MULTI_Y, Layout.STACKED_Y].includes(plot_layout)) {
         // create new axes per unit
         let unitAxisMapper = {};
         let i = 0;
@@ -119,7 +151,7 @@ function setupPlotlyLayout(sensors, traces) {
             trace["yaxis"] = unitAxisMapper[sensor.unit];
         }
 
-        if (type == Layout.STACKED_Y) {
+        if (plot_layout == Layout.STACKED_Y) {
             // stacking related config
             const splitHeight = 1.0 / axisCounter;
             i = 0;
@@ -129,7 +161,7 @@ function setupPlotlyLayout(sensors, traces) {
             }
             layout["height"] = 300 + 160 * axisCounter;
         }
-        else if (type == Layout.MULTI_Y) {
+        else if (plot_layout == Layout.MULTI_Y) {
             // TODO: this one should be absolute, not realtive...
             // multi y realted config
             const spacing = 0.08;
@@ -164,10 +196,10 @@ function extractData(sensors, readings) {
 }
 
 // extends plot every timeinterval by new values
-function updatePlot(plotElem, sensors, minutes=1) {
+function updatePlot(plotElem, sensors, seconds=60) {
     return setInterval(function() {
         if (!$.isEmptyObject(sensors)) {
-            getReadings(sensors, {minutes: minutes}, function(readings) {
+            getReadings(sensors, seconds, function(readings) {
                 let traces = extractData(sensors, readings);
                 // transform into new standard
                 let x = [],  y = [];
@@ -178,5 +210,5 @@ function updatePlot(plotElem, sensors, minutes=1) {
                 Plotly.extendTraces(plotElem,  {x: x, y: y}, [...Array(traces.length).keys()]);
             })
         }
-    }, minutes * 60000)
+    }, seconds * 1000)
 }

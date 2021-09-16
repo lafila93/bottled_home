@@ -12,19 +12,16 @@
 <h1>Sensor</h1>
 <div id="plot"></div>
 <div id="timedelta_buttons"></div>
-<div id="plot_type_radio" class="form-check" hidden>
-    <div class="form-check">
-        <input class="form-check-input" type="radio" name="plot_type" value="DEFAULT">
-        <label class="form-check-label" for="DEFAULT">DEFAULT</label>
-    </div>
-    <div class="form-check">
-        <input class="form-check-input" type="radio" name="plot_type" value="MULTI_Y">
-        <label class="form-check-label" for="MULTI_Y">MULTI_Y</label>
-    </div><div class="form-check">
-        <input class="form-check-input" type="radio" name="plot_type" value="STACKED_Y">
-        <label class="form-check-label" for="STACKED_Y">STACKED_Y</label>
-    </div>
-</div>
+<table>
+    <tr>
+        <th>Plot layout</th>
+        <th>Group datetime by</th>
+    </tr>
+    <tr>
+        <td><div id="plot_layout_radio" class="form-check"></div></td>
+        <td><div id="timeinterval_radio" class="form-check"></div></td>
+    </tr>
+</table>
 <div id="sensor_table"></div>
 <a href="{{ url_for('main.sensor_new') }}">New Sensor</a>
 {% endblock %}
@@ -41,24 +38,63 @@ $.ajax({
 
         $("#sensor_table").html(buildSensorTable(sensors));
 
-        getReadingsPlot("plot", sensors, {days: 1});
+        getReadings(sensors, 60*60*24, function(readings) {
+            plot("plot", sensors, readings)
+        })
 
         $("#timedelta_buttons").append(buildTimedeltaButtons("plot", sensors));
 
         var timer = updatePlot("plot", sensors);
-
-        // plot layout radio: click replot
-        $("#plot_type_radio :input").on("click", function(event) {
-            setPlotLayoutType(this.value);
-            // TODO: do not hard code timedelta here
-            getReadingsPlot("plot", sensors, {days: 1}, type=Layout[this.value]);
-        });
-        $("#plot_type_radio").prop("hidden", false);
     },
 });
 
-// set current radio checked
-$("#plot_type_radio :input[value=" + getPlotLayoutType() + "]").prop("checked", true);
+// create layout radio
+for (const layout in Layout) {
+    $("#plot_layout_radio").append(
+        $("<div>").addClass("form-check").append(
+            $("<input>").addClass("form-check-input plot-config").prop({
+                type: "radio", name: "plot_layout", value: layout
+            }),
+            $("<label>").addClass("form-check-label").prop("for", layout)
+                .html(layout)
+        )
+    )
+}
+
+// create timeinterval  radio
+timeintervalMapper = {
+    "Nothing": null,
+    "5 Minutes": 60*5,
+    "Hours": "H",
+    "Days": "d",
+    "Weeks": 60*60*24*7,
+    "Months": "m",
+    "Years": "Y",
+}
+for (const [grouper_label, value] of Object.entries(timeintervalMapper)) {
+    $("#timeinterval_radio").append(
+        $("<div>").addClass("form-check").append(
+            $("<input>").addClass("form-check-input plot-config").prop({
+                type: "radio", name: "plot_timeinterval", value: value
+            }),
+            $("<label>").addClass("form-check-label").prop("for", grouper_label)
+                .html(grouper_label)
+        )
+    )
+}
+
+// set default radio from cookie
+let cookie = getPlotCookie()
+$("#plot_layout_radio :input[value='" + cookie.layout + "']").prop("checked", true);
+$("#timeinterval_radio :input[value='" + cookie.timeinterval + "']").prop("checked", true)
+
+
+// plot layout radio: click replot
+$(".plot-config").on("click", function(event) {
+    let config = parsePlotConfigs();
+    setPlotCookieKey("layout", config.layout);
+    setPlotCookieKey("timeinterval", config.timeinterval);
+});
 
 </script>
 {% endblock %}

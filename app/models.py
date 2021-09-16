@@ -1,5 +1,7 @@
 from datetime import datetime
 
+from sqlalchemy import func
+
 from app import db
 
 
@@ -90,6 +92,31 @@ class SensorReading(db.Model, ApiMixin):
         if len(args) > 0:
             data = {arg : data[arg] for arg in args}
         return data
+
+    @classmethod
+    def timeinterval_grouper(cls, timeinterval):
+        """ Returns func that returns clustered timestamp values
+
+        Args:
+            interval (int-str): cluster datetime by x seconds or strfformatter string
+                check mapper values
+                
+        Returns:
+            return func object (use for queries)
+        """
+        
+        if isinstance(timeinterval, str):
+            mapper = {"Y": 1, "m": 2, "d": 3, "H": 4, "M": 5, "S": 6}
+            i = mapper.get(timeinterval)
+            if i is None:
+                raise ValueError("timeinterval must be an int or one of the following chars: {}".format(list(mapper.keys())))
+            formatter = ["%Y-", "%m-", "%dT", "%H:", "%M:", "%S"]
+            filler = ["0-", "01-", "01T", "00:", "00:", "00"]
+            format_str = "".join(formatter[:i] + filler[i:])
+            return func.strftime(format_str, cls.datetime)
+        # seconds
+        return func.strftime("%s", cls.datetime) / timeinterval * timeinterval
+
 
 
 class Sensor(db.Model, ApiMixin):

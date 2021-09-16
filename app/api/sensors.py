@@ -1,10 +1,11 @@
-from datetime import datetime, timedelta
 import time
+import datetime
 
-from app import db, models
+from app import db, helper, models
 from app.api import bp
 from app.api.errors import bad_request
 from flask import jsonify, request
+from sqlalchemy import func
 
 
 @bp.route("/sensor")
@@ -136,9 +137,10 @@ def sensor_reading_get():
     """ route for sensor reading get request
 
     Request Args:
-        sensor_id[]: one or more sensor ids
-        days: number of days behind to retrieve data up to
-        minutes: number of minutes behind to retrieve data up to
+        sensor_id[]: optional, one or more sensor ids
+        timedelta: optional, number of seconds behind to retrieve data up to
+        timeinterval: optional, letter for datetime grouping
+        timeinterval_function: optional, function for grouping, avg by default
 
     Returns:
         response: JSON object of sensors_id keys and minimal reading values
@@ -150,32 +152,70 @@ def sensor_reading_get():
     except TypeError:
         return bad_request("sensor_id needs to be integers")
 
-    # check for invalid ids
-    for id in ids:    
-        if models.Sensor.query.get(id) is None:
-            return bad_request("Unknown sensor id {}".format(id))
+    # check if all sensor_ids are present
+    found_ids = [s.id for s in 
+        models.Sensor.query.filter(models.Sensor.id.in_(ids)).all()]
+    xor_ids = ids.symmetric_difference(found_ids)
+    if xor_ids:
+        return bad_request("Unknown sensor id(s) {}".format(xor_ids))
         
     # if no ids given, grab all ids
     if len(ids) == 0:
         ids = [s.id for s in models.Sensor.query.all()]
 
-    days = request.args.get("days", 0)
-    minutes = request.args.get("minutes", 0)
+    timedelta = request.args.get("timedelta", 0)
     try:
-        days = float(days)
-        minutes = float(minutes)
+        timedelta = float(timedelta)
     except ValueError:
-        return bad_request("'days' and 'minutes' need to be numbers")
-    start = datetime.utcnow() - timedelta(days=days, minutes=minutes)
+        return bad_request("'timedelta' needs to be a number")
+    end = datetime.datetime.utcnow()
+    start = end - datetime.timedelta(seconds=timedelta)
+    
+    base_query = models.SensorReading.query \
+        .filter(models.SensorReading.sensor_id.in_(ids)) \
+        .filter(models.SensorReading.datetime.between(start, end)) \
+        .order_by(models.SensorReading.datetime.asc())
 
-    data = {}
-    for id in ids:
-        readings = models.SensorReading.query.filter(
-            models.SensorReading.sensor_id == id).filter(
-            models.SensorReading.datetime >= start).order_by(
-            models.SensorReading.datetime.asc()).all()
-        # generate minimal sensor reading entries
-        data[id] = [r.to_dict("value", "datetime") for r in readings]
+    # data container for response
+    data = {id: [] for id in ids}
+
+    ti = request.args.get("timeinterval")
+    if not ti is None:
+        # handle timeinterval argument
+        try:
+            ti = int(ti)
+        except ValueError:
+            pass
+        try:
+            timeinterval_query_func = models.SensorReading.timeinterval_grouper(ti)
+        except ValueError as e:
+            return bad_request("'timeinterval' value invalid: {}".format(e))
+
+        func_mapper = {"avg": func.avg, "min": func.min, "max": func.max, "sum": func.sum}
+        ti_func = func_mapper.get(request.args.get("timeinterval_function", "avg"))
+        if ti_func is None:
+            return bad_request("'timeinterval_function' needs to be one of {}".format(list(func_mapper.keys())))
+
+        
+        base_query = base_query.with_entities(
+            models.SensorReading.sensor_id,
+            timeinterval_query_func.label("timeinterval"),
+            ti_func(models.SensorReading.value).label("value_agg"),
+            func.count(models.SensorReading.id).label("count"),
+        ).group_by("timeinterval", models.SensorReading.sensor_id)
+
+        for row in base_query.all():
+            data[row.sensor_id].append({
+                "value": row.value_agg,
+                "datetime" : helper.to_datetime(row.timeinterval).isoformat(),
+                "count" : row.count,
+            })
+    else:
+        for row in base_query.all():
+            data[row.sensor_id].append({
+                "value": row.value,
+                "datetime": row.datetime.isoformat(),
+            })
 
     return jsonify(data)
 
@@ -220,7 +260,7 @@ def sensor_reading_post():
         if "datetime" in reading_dict:
             timestamp = reading_dict["datetime"]
             try:
-                reading_dict["datetime"] = datetime.fromtimestamp(timestamp)
+                reading_dict["datetime"] = helper.to_datetime(timestamp)
             except TypeError as e:
                 return bad_request("Could not convert given datetime timestamp: '{}'".format(timestamp))
 
@@ -286,7 +326,7 @@ def sensor_reading_put(id):
     if "datetime" in data:
         timestamp = data["datetime"]
         try:
-            data["datetime"] = datetime.fromtimestamp(timestamp)
+            data["datetime"] = helper.to_datetime(timestamp)
         except TypeError as e:
             return bad_request("Could not convert given datetime timestamp: '{}'".format(timestamp))
 
