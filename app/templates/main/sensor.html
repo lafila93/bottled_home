@@ -40,7 +40,7 @@ $.ajax({
 
         getReadings(sensors, 60*60*24, function(readings) {
             plot("plot", sensors, readings)
-        })
+        }, timeinterval=parsePlotConfigs().timeinterval)
 
         $("#timedelta_buttons").append(buildTimedeltaButtons("plot", sensors));
 
